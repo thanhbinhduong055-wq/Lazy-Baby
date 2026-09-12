@@ -1,10 +1,30 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { KEY, HEADINGS, settings, plan, summarize, validateSummary, persistVerified } from '../core.js';
+import { KEY, HEADINGS, settings, plan, summarize, validateSummary, persistVerified, composeMemory, previousMemory, scopeMemories } from '../core.js';
 
 const chat = (n = 25) => Array.from({ length: n }, (_, i) => ({ name: i % 2 ? '小雪' : '玩家', is_user: i % 2 === 0, is_system: false, mes: `事件 ${i}` }));
 const valid = HEADINGS.map(h => `## ${h}\n${h === '角色表' ? '| 姓名 | 身份 | 关系 |\n| --- | --- | --- |\n| 小雪 | 旅人 | 同伴 |' : '未交代'}`).join('\n\n');
 const options = settings();
+
+test('角色书跨聊天记忆隔离不修改世界书原条目或普通设定', () => {
+    const own = { uid: 1, [KEY]: { owner: 'A' }, disable: true };
+    const foreign = { uid: 2, [KEY]: { owner: 'B' }, disable: false };
+    const ordinary = { uid: 3, content: '通用角色设定' };
+    for (const field of ['globalLore', 'characterLore', 'chatLore', 'personaLore']) {
+        const lore = { [field]: [own, foreign, ordinary] };
+        scopeMemories(lore, 'A');
+        assert.deepEqual(lore[field], [own, ordinary]);
+        assert.equal(foreign.disable, false);
+        assert.equal(own.disable, true);
+    }
+});
+test('附带提示词写入一次，滚动总结取正文，兼容旧版条目', () => {
+    const content = composeMemory('角色正在休息', '保持连续性');
+    assert.equal(content, '保持连续性\n\n角色正在休息');
+    assert.equal(previousMemory({ content, [KEY]: { instruction: '保持连续性' } }), '角色正在休息');
+    assert.equal(previousMemory({ content: '旧版回忆' }), '旧版回忆');
+    assert.equal(composeMemory('正文', ''), '正文');
+});
 
 test('保留最近十层，用户与角色均按一层计数', async () => {
     const result = await plan(chat());

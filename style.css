@@ -9,6 +9,9 @@
 #gufa-memory button { min-height: 40px; margin: 0; }
 #gufa-memory .gm-primary { border-color: var(--gm-accent); }
 #gufa-memory :focus-visible { outline: 2px solid var(--gm-accent); outline-offset: 2px; }
-#gufa-memory pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 360px; overflow-y: auto; font-family: inherit; font-size: .92em; padding: 10px; border: 1px solid var(--SmartThemeBorderColor, #777); border-radius: 8px; }
+#gufa-memory textarea { width: 100%; resize: vertical; line-height: 1.6; box-sizing: border-box; }
+#gufa-memory .gm-editor { min-height: 280px; white-space: pre-wrap; overflow-wrap: anywhere; font-family: inherit; font-size: .95em; }
+#gufa-memory details > summary { padding: 10px 0; cursor: pointer; }
+#gufa-memory button:disabled { opacity: .5; cursor: not-allowed; }
 #gufa-memory [role="status"] { line-height: 1.6; overflow-wrap: anywhere; }
 @media (max-width: 480px) { #gufa-memory .gm-grid { grid-template-columns: 1fr; gap: 0; } }

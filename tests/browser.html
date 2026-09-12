@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>懒人宝 · 浏览器流程测试</title>
+<link rel="stylesheet" href="/scripts/extensions/third-party/lanrenbao/style.css">
+<style>
+body{margin:0;background:#212832;color:#e7ebf0;font:15px/1.5 system-ui,sans-serif;padding:20px}
+main{max-width:490px;margin:auto}input,select,textarea,button{font:inherit;color:inherit;background:#303a47;border:1px solid #6b7785;border-radius:6px;padding:8px;max-width:100%;box-sizing:border-box}
+select{width:100%}button{cursor:pointer}.inline-drawer-header{padding:10px;background:#303a47}#fixture-status{position:sticky;top:0;background:#192129;padding:10px;z-index:1}#fixture-output{white-space:pre-wrap;overflow-wrap:anywhere}
+</style>
+<main><h1>懒人宝流程测试</h1><p>模拟角色书与模型，强制关闭 Web Crypto。没有真实聊天或外部写入。</p>
+<div id="fixture-status">模型调用 0 次；保存 0 次；隐藏 0 / 25 层</div>
+<button id="fixture-fail">切换下次生成失败</button><div id="extensions_settings2"></div><pre id="fixture-output"></pre></main>
+<script type="module">
+import { HEADINGS } from '/scripts/extensions/third-party/lanrenbao/core.js';
+Object.defineProperty(window, 'crypto', { value: {}, configurable: true });
+let book = { entries: {} }, calls = 0, saves = 0, fail = false;
+const chat = Array.from({length:25}, (_,i) => ({name:i%2?'小雪':'玩家', is_user:!(i%2), is_system:false, mes:`第${i+1}层：小雪抵达旅店，与玩家约定次日寻找失踪的同伴。`}));
+function report() {
+ document.querySelector('#fixture-status').textContent = `模型调用 ${calls} 次；保存 ${saves} 次；隐藏 ${chat.filter(m=>m.is_system).length} / 25 层`;
+ document.querySelector('#fixture-output').textContent = Object.values(book.entries).map(e=>e.comment+'\n'+e.content).join('\n');
+}
+document.querySelector('#fixture-fail').onclick=()=>{fail=!fail;document.querySelector('#fixture-fail').textContent=fail?'下次生成会失败':'切换下次生成失败';};
+const events = new Map();
+const ctx = {chat, chatMetadata:{world_info:'聊天专用书'}, characters:[{avatar:'snow.png',data:{extensions:{world:'小雪的角色世界书'}}}], characterId:0, name2:'小雪', maxContext:16000, extensionSettings:{},
+ getCurrentChatId:()=> 'browser-test', getRequestHeaders:()=>({'Content-Type':'application/json'}), getTokenCountAsync:async s=>Math.ceil(s.length/1.5),
+ generateRaw:async()=> { calls++;report(); if(fail){fail=false;throw new Error('模拟 API 离线');} return HEADINGS.map(h=>`## ${h}\n${h==='角色表'?'|姓名|身份|关系|\n|---|---|---|\n|小雪|旅人|玩家的同伴|':h==='剧情摘要'?`第 ${calls} 版：小雪与玩家在旅店汇合，约定寻找失踪的同伴。`:'尚未交代'}`).join('\n\n'); },
+ saveWorldInfo:async(name,data)=>{if(name!=='小雪的角色世界书')throw new Error('目标错误');book=structuredClone(data);saves++;report();},
+ saveChat:async()=>report(), saveSettingsDebounced:()=>{}, executeSlashCommandsWithOptions:async()=>({pipe:'聊天专用书'}),
+ eventTypes:{CHAT_CHANGED:'chat',WORLDINFO_ENTRIES_LOADED:'lore'},eventSource:{on:(key,cb)=>events.set(key,cb)}
+};
+window.SillyTavern={getContext:()=>ctx};window.jQuery=fn=>fn();window.toastr={success:()=>{},error:message=>{document.querySelector('#fixture-status').textContent=message;}};
+const realFetch=window.fetch;
+window.fetch=async (url,options)=>url==='/api/worldinfo/get'?new Response(JSON.stringify(book),{status:200}):realFetch(url,options);
+await import('/scripts/extensions/third-party/lanrenbao/index.js');
+</script></html>
