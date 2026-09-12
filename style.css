@@ -1,0 +1,14 @@
+#gufa-memory { --gm-accent: #91bbc8; }
+#gufa-memory .gm-intro { border-left: 3px solid var(--gm-accent); padding-left: 12px; margin: 10px 0 16px; }
+#gufa-memory .gm-intro strong { display: block; font-family: "KaiTi", "STKaiti", serif; font-size: 1.3em; letter-spacing: .12em; }
+#gufa-memory .gm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+#gufa-memory label { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+#gufa-memory small { opacity: .75; line-height: 1.5; }
+#gufa-memory .gm-check { flex-direction: row; align-items: center; }
+#gufa-memory .gm-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+#gufa-memory button { min-height: 40px; margin: 0; }
+#gufa-memory .gm-primary { border-color: var(--gm-accent); }
+#gufa-memory :focus-visible { outline: 2px solid var(--gm-accent); outline-offset: 2px; }
+#gufa-memory pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 360px; overflow-y: auto; font-family: inherit; font-size: .92em; padding: 10px; border: 1px solid var(--SmartThemeBorderColor, #777); border-radius: 8px; }
+#gufa-memory [role="status"] { line-height: 1.6; overflow-wrap: anywhere; }
+@media (max-width: 480px) { #gufa-memory .gm-grid { grid-template-columns: 1fr; gap: 0; } }

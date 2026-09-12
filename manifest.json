@@ -1,0 +1,11 @@
+{
+  "display_name": "懒人宝",
+  "loading_order": 50,
+  "requires": [],
+  "optional": [],
+  "js": "index.js",
+  "css": "style.css",
+  "author": "Lanrenbao",
+  "version": "1.0.0",
+  "homePage": "https://github.com/thanhbinhduong055-wq/Lazy-Baby"
+}
