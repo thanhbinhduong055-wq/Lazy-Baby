@@ -106,6 +106,7 @@ async function generateDraft(regenerate = false) {
         if (!boundBook(ctx, 'character')) return status('当前角色未绑定主世界书。请先在角色面板绑定，或改用聊天世界书。');
     }
     cancelled = false;
+    let autoDraft = null;
     toggleBusy(true);
     try {
         let next;
@@ -146,9 +147,12 @@ async function generateDraft(regenerate = false) {
         if (!regenerate) $id('title').value = next.title;
         $id('result').open = true;
         await updateTokens();
+        assertDraft(next);
+        if (options.autoWrite) autoDraft = next;
         if (identity(context()) === next.owner) status(`草稿已生成：${next.messages.length} 层 →「${next.bookName || '待创建的聊天世界书'}」。可编辑或重新生成；尚未写入、尚未隐藏。`);
     } catch (error) { console.error('[懒人宝]', error); status(error.message); }
     finally { toggleBusy(false); }
+    if (autoDraft && draft === autoDraft && !cancelled) await saveDraft();
 }
 
 async function saveDraft() {
@@ -239,7 +243,7 @@ function init() {
         <div class="inline-drawer">
             <div class="inline-drawer-toggle inline-drawer-header"><b>懒人宝 · 剧情记忆</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>
             <div class="inline-drawer-content">
-                <div class="gm-intro"><strong>旧事入册，新章续写</strong><small>先预览，改满意，再写入。最近十层原文完整保留。</small></div>
+                <div class="gm-intro"><strong>旧事入册，新章续写</strong><small>可自动写入，也可先预览编辑。最近十层原文完整保留。</small></div>
                 <label>写入位置<select id="gm-target" class="text_pole"><option value="character">角色世界书 · 当前角色绑定的主世界书</option><option value="chat">聊天世界书 · 当前聊天独立记忆</option></select><small id="gm-book"></small></label>
                 <label>回忆条目<select id="gm-entry" class="text_pole"></select><small>可在目标书中新建条目。选择现有条目会合并原内容；确认写入后改为常驻激活。</small></label>
                 <button type="button" id="gm-refresh" class="menu_button">刷新条目</button>
@@ -249,7 +253,9 @@ function init() {
                     <label>单次输入 Token 预算<input id="gm-inputTokens" class="text_pole" type="number" min="1024" max="64000" step="512"></label>
                 </div>
                 <label>总结提示词<textarea id="gm-generationPrompt" class="text_pole" rows="3" maxlength="2000"></textarea><small>可补充关注的人物、关系或伏笔。重新生成会使用最新提示词和详细程度。</small></label>
-                <label class="gm-check"><input id="gm-autoHide" type="checkbox">确认写入成功后，自动隐藏已总结楼层</label>
+                <label class="gm-check"><input id="gm-autoWrite" type="checkbox">生成完成后自动写入世界书</label>
+                <small>默认开启；生成和重新生成成功后直接保存。关闭后先预览编辑，再手动确认。写入不增加模型调用。</small>
+                <label class="gm-check"><input id="gm-autoHide" type="checkbox">写入成功后，自动隐藏已总结楼层</label>
                 <div class="gm-actions">
                     <button type="button" id="gm-run" class="menu_button gm-primary">生成记忆草稿</button>
                     <button type="button" id="gm-restore" class="menu_button">恢复插件隐藏楼层</button>

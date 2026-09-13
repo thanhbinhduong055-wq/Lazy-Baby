@@ -3,7 +3,7 @@ import { sha256 } from './sha256.js';
 export const KEY = 'gufa_memory';
 export const HEADINGS = ['时间', '地点', '人物', '剧情摘要', '角色表', '当前角色状态'];
 export const DEFAULTS = {
-    detail: 'standard', maxTokens: 1200, inputTokens: 6000, autoHide: true, target: 'character',
+    detail: 'standard', maxTokens: 1200, inputTokens: 6000, autoHide: true, autoWrite: true, target: 'character',
     generationPrompt: '客观整理前文，保留事件因果、人物关系、未解决伏笔与最新状态，不续写、不编造。',
     memoryPrompt: '以下是已发生的剧情回忆。请维持人物关系与事件连续性，当前状态以最近对话为准，不要重复演绎旧剧情。',
 };
@@ -20,6 +20,7 @@ export function settings(value = {}) {
         maxTokens: clamp(value.maxTokens, 1200, 256, 8000),
         inputTokens: clamp(value.inputTokens, 6000, 1024, 64000),
         autoHide: value.autoHide !== false,
+        autoWrite: value.autoWrite !== false,
         target: value.target === 'chat' ? 'chat' : 'character',
         generationPrompt: typeof value.generationPrompt === 'string' ? value.generationPrompt.slice(0, 2000) : DEFAULTS.generationPrompt,
         memoryPrompt: typeof value.memoryPrompt === 'string' ? value.memoryPrompt.slice(0, 1000) : DEFAULTS.memoryPrompt,

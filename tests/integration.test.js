@@ -17,7 +17,7 @@ function host(options = {}) {
         chat: Array.from({ length: 25 }, (_, i) => ({ name: '小雪', is_user: false, is_system: false, mes: `事件${i}` })),
         chatMetadata: options.unbound ? {} : { world_info: '聊天书' },
         characters: [{ avatar: 'alice.png', data: { extensions: { world: options.characterBook || '' } } }], characterId: 0, name2: '小雪', maxContext: 16000,
-        extensionSettings: { [core.KEY]: core.settings({ target: 'chat', memoryPrompt: '', ...options.settings }) },
+        extensionSettings: { [core.KEY]: core.settings({ target: 'chat', memoryPrompt: '', autoWrite: false, ...options.settings }) },
         getCurrentChatId: () => state.current, getRequestHeaders: () => ({}),
         getTokenCountAsync: async () => 200,
         generateRaw: async args => { state.generations++; state.prompts.push(args.prompt); return await options.generate?.(ctx, state) || summary; },
@@ -54,6 +54,54 @@ function host(options = {}) {
     return { ctx, state, node, api: sandbox.api };
 }
 
+test('自动写入默认开启，显式关闭可保留人工预览模式', () => {
+    assert.equal(core.settings().autoWrite, true);
+    assert.equal(core.settings({ autoWrite: false }).autoWrite, false);
+});
+test('自动模式一次生成后直接写入角色书并只隐藏前十五层', async () => {
+    const h = host({ characterBook: '角色书', settings: { target: 'character', autoWrite: true } });
+    await h.api.generateDraft();
+    assert.equal(h.state.generations, 1);
+    assert.equal(h.state.saves, 1);
+    assert.equal(h.state.savedName, '角色书');
+    assert.equal(h.ctx.chat.filter(m => m.is_system).length, 15);
+    assert.ok(h.ctx.chat.slice(-10).every(m => !m.is_system));
+});
+test('自动写入失败保留草稿且不隐藏，不追加模型调用', async () => {
+    const h = host({ failSave: true, settings: { autoWrite: true } });
+    await h.api.generateDraft();
+    assert.equal(h.state.generations, 1);
+    assert.equal(h.state.saves, 1);
+    assert.equal(h.node('gm-preview').value, summary);
+    assert.ok(h.api.getDraft());
+    assert.ok(h.ctx.chat.every(m => !m.is_system));
+});
+test('自动写入可独立关闭自动隐藏', async () => {
+    const h = host({ settings: { autoWrite: true, autoHide: false } });
+    await h.api.generateDraft();
+    assert.equal(h.state.saves, 1);
+    assert.ok(h.ctx.chat.every(m => !m.is_system));
+});
+test('重新生成开启自动写入后只保存新生成的草稿', async () => {
+    const h = host();
+    await h.api.generateDraft();
+    h.ctx.extensionSettings[core.KEY].autoWrite = true;
+    await h.api.generateDraft(true);
+    assert.equal(h.state.generations, 2);
+    assert.equal(h.state.saves, 1);
+});
+test('自动模式生成失败或取消时不保存旧草稿', async () => {
+    for (const cancel of [false, true]) {
+        const h = host({ generate: async (_ctx, state) => {
+            if (state.generations > 1) { if (cancel) h.api.cancel(); else throw new Error('离线'); }
+        } });
+        await h.api.generateDraft();
+        h.ctx.extensionSettings[core.KEY].autoWrite = true;
+        await h.api.generateDraft(true);
+        assert.equal(h.state.saves, 0);
+        assert.ok(h.ctx.chat.every(m => !m.is_system));
+    }
+});
 test('完整按钮流程：生成、写入常驻条目、服务器验证、隐藏前十五层', async () => {
     const h = host();
     await h.api.archive();
