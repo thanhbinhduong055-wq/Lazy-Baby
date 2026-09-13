@@ -72,35 +72,23 @@ export function validateSummary(text) {
     return text.trim();
 }
 
-// Each request must fit the actual configured context; no silent source truncation.
+// One user action makes at most one generation request: no batching or retries.
 export async function summarize({ previous, messages, options, count, generate, assertCurrent, progress, contextLimit }) {
-    let memory = previous;
-    let cursor = 0;
+    if (!messages.length) return previous;
     const budget = Math.min(options.inputTokens, contextLimit - options.maxTokens - 768);
-    if (budget < 512) throw new Error('当前上下文不足，请降低回忆 Token 上限或提高酒馆上下文长度。');
-    while (cursor < messages.length) {
-        let source = '';
-        let next = cursor;
-        while (next < messages.length) {
-            const candidate = source + (source ? '\n\n' : '') + messages[next].text;
-            if (await count(promptFor(memory, candidate, options)) > budget) break;
-            source = candidate;
-            next++;
-        }
-        if (next === cursor) throw new Error(`第 ${messages[cursor].index + 1} 层或已有回忆过长，无法装入输入预算。请提高输入预算/上下文长度。`);
-        assertCurrent();
-        progress(`正在整理 ${cursor + 1}–${next} / ${messages.length} 层…`);
-        let result = await generate(promptFor(memory, source, options), options.maxTokens);
-        assertCurrent();
-        result = validateSummary(result);
-        if (await count(result) > options.maxTokens) {
-            result = validateSummary(await generate(promptFor('', `请压缩以下回忆并完整保留六个栏目：\n${result}`, options), options.maxTokens));
-            assertCurrent();
-            if (await count(result) > options.maxTokens) throw new Error('模型两次输出均超过 Token 上限，未写入世界书，请提高上限或更换模型。');
-        }
-        memory = result;
-        cursor = next;
-    }
+    if (!Number.isFinite(budget) || budget < 512) throw new Error('当前上下文不足，请降低回忆 Token 上限或提高酒馆上下文长度。');
+    const prompt = promptFor(previous, messages.map(message => message.text).join('\n\n'), options);
+    const inputTokens = await count(prompt);
+    assertCurrent();
+    if (!Number.isFinite(inputTokens)) throw new Error('无法计算输入 Token，未调用模型。');
+    if (inputTokens > budget) throw new Error(`全部素材过长：需要 ${inputTokens} 输入 tokens，当前可用 ${budget}。请提高输入预算或酒馆上下文长度；单次调用模式不会分批或截断素材。`);
+    progress(`正在一次整理全部 ${messages.length} 层…`);
+    const result = await generate(prompt, options.maxTokens);
+    assertCurrent();
+    const memory = validateSummary(result);
+    const outputTokens = await count(memory);
+    assertCurrent();
+    if (!Number.isFinite(outputTokens) || outputTokens > options.maxTokens) throw new Error('模型输出超过 Token 上限或无法计数，未自动重试。请调整上限后手动重新生成。');
     return memory;
 }
 

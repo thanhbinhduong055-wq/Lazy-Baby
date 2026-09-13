@@ -246,7 +246,7 @@ function init() {
                 <label>信息详细程度<select id="gm-detail" class="text_pole"><option value="brief">精简 · 事件与状态</option><option value="standard">标准 · 因果与关系</option><option value="rich">详细 · 动机与伏笔</option></select></label>
                 <div class="gm-grid">
                     <label>回忆 Token 上限<input id="gm-maxTokens" class="text_pole" type="number" min="256" max="8000" step="64"></label>
-                    <label>每次输入 Token 预算<input id="gm-inputTokens" class="text_pole" type="number" min="1024" max="64000" step="512"></label>
+                    <label>单次输入 Token 预算<input id="gm-inputTokens" class="text_pole" type="number" min="1024" max="64000" step="512"></label>
                 </div>
                 <label>总结提示词<textarea id="gm-generationPrompt" class="text_pole" rows="3" maxlength="2000"></textarea><small>可补充关注的人物、关系或伏笔。重新生成会使用最新提示词和详细程度。</small></label>
                 <label class="gm-check"><input id="gm-autoHide" type="checkbox">确认写入成功后，自动隐藏已总结楼层</label>
@@ -265,7 +265,7 @@ function init() {
                         <button type="button" id="gm-regenerate" class="menu_button" disabled>重新生成</button>
                         <button type="button" id="gm-save" class="menu_button gm-primary" disabled>确认写入世界书</button>
                     </div>
-                    <small>重新生成成功后会替换正文中的手动修改；失败保留原草稿。回忆为常驻条目，会占用上下文。长聊天可能调用模型多次。</small>
+                    <small>每次生成或重新生成最多调用模型一次，不自动分批或重试。重新生成成功后替换正文；失败保留原草稿。确认写入不调用模型。</small>
                 </details>
             </div>
         </div>`;

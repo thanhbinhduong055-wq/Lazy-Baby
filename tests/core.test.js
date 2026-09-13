@@ -82,14 +82,27 @@ test('旧回忆进入提示词，六项栏目与预算生效', async () => {
     assert.match(prompt, /旧约定/);
     assert.match(prompt, /发生了事件/);
 });
-test('长聊天分批且每批继承上次回忆', async () => {
+test('多层素材和旧回忆在一次调用中完整发送', async () => {
     let calls = 0;
     await summarize(setup({
+        previous: '旧回忆',
         messages: [0, 1, 2].map(index => ({ index, text: `SOURCE${index}` })),
-        count: async text => text.includes('SOURCE') ? (text.match(/SOURCE/g).length * 4000) : 200,
-        generate: async prompt => { if (calls++) assert.ok(prompt.includes(valid)); return valid; },
+        generate: async prompt => {
+            calls++;
+            for (const text of ['旧回忆', 'SOURCE0', 'SOURCE1', 'SOURCE2']) assert.ok(prompt.includes(text));
+            return valid;
+        },
     }));
-    assert.equal(calls, 3);
+    assert.equal(calls, 1);
+});
+test('多层合计超限时零调用，不改为分批调用', async () => {
+    let calls = 0;
+    await assert.rejects(summarize(setup({
+        messages: [0, 1, 2].map(index => ({ index, text: `SOURCE${index}` })),
+        count: async text => text.includes('SOURCE') ? text.match(/SOURCE/g).length * 4000 : 200,
+        generate: async () => { calls++; return valid; },
+    })), /全部素材过长/);
+    assert.equal(calls, 0);
 });
 test('单层超过预算时不调用模型，不截断原文', async () => {
     await assert.rejects(summarize(setup({ count: async () => 99999, generate: () => assert.fail('不应调用') })), /过长/);
@@ -97,10 +110,10 @@ test('单层超过预算时不调用模型，不截断原文', async () => {
 test('上下文不足时停止', async () => {
     await assert.rejects(summarize(setup({ contextLimit: 2000 })), /上下文不足/);
 });
-test('超限输出仅重试一次，仍超限则停止', async () => {
+test('超限输出不自动压缩重试，总共只调用一次', async () => {
     let calls = 0;
     await assert.rejects(summarize(setup({ count: async t => t === valid ? 2000 : 200, generate: async () => { calls++; return valid; } })), /超过 Token/);
-    assert.equal(calls, 2);
+    assert.equal(calls, 1);
 });
 test('聊天切换或取消在模型返回后中止', async () => {
     let changed = false;
